@@ -88,30 +88,40 @@ def zvault_add(label: str):
     password = getpass.getpass("Enter your Master password: ")
     data, fernet = unlock_zvault(password)
 
-    secret = getpass.getpass(f"Enter secret for '{label}': ")
-    data[label] = secret
+    if label in data:
+        print("This label already exists")
+        overwrite = input("Overwrite? (y/n): ")
+        if overwrite == "n":
+            exit()
+        else:
+            secret = getpass.getpass(f"Enter secret for '{label}': ")
+            data[label] = secret
+    else:
+        secret = getpass.getpass(f"Enter secret for '{label}': ")
+        data[label] = secret
+
     save_zvault(data, fernet)
     print(f"'{label}' added.")
 
 
-# zvault_get prints label: secret for a specific entry
-def zvault_get(name: str):
-    password = getpass.getpass("Enter your Master key ")
+# zvault_get prints 'label: secret' for a specific entry
+def zvault_get(label: str):
+    password = getpass.getpass("Enter your Master password: ")
     data, _ = unlock_zvault(password)
-    if name not in data:
-        print(f"No entry for '{name}'.")
+    if label not in data:
+        print(f"No entry for '{label}'.")
         return
 
-    print(f"{name}: {data[name]}")
+    print(f" {label} →  {data[label]}")
 
 
 # zvault_list lists only the labels for all entries
 def zvault_list():
-    password = getpass.getpass("Enter your Master key: ")
+    password = getpass.getpass("Enter your Master password: ")
     data, _ = unlock_zvault(password)
 
     if not data:
         print("Vault is empty.")
         return
     for key in data:
-        print(f"  - {key}")
+        print(f"• {key}")
