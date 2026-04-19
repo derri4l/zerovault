@@ -1,7 +1,9 @@
 #!/bin/bash
 echo "Welcome to zerovault. Getting dependencies."
-pip install cryptography argon2-cffi --break-system-packages
+python3 -m venv .zvault
+source .zvault/bin/activate
 
+pip install cryptography argon2-cffi
 clear
 
 echo "Creating zvault alias..."
