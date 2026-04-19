@@ -1,11 +1,21 @@
 import argparse
 import base64
 import getpass
+import inspect
 import json
+import logging
 import os
 
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.fernet import Fernet
+
+
+# logging
+def zlogger():
+    logging.basicConfig(
+        filename=".zvault.log", level=logging.INFO, format="%(asctime)s - %(message)s"
+    )
+
 
 # file paths
 SALT_FILE = "salt.bin"
@@ -54,7 +64,6 @@ def zsetup_vault():
 
     with open(VAULT_FILE, "wb") as f:
         f.write(token)
-
     print("Vault created.")
 
 
@@ -64,6 +73,10 @@ def load_saltkey() -> bytes:
 
 
 # unlock_zvault derives the key from master password to decrypt the vault
+zlogger()
+caller = inspect.stack()[0][3]
+
+
 def unlock_zvault() -> tuple[dict, Fernet]:
     attempt = 0
     salt = load_saltkey()
@@ -76,10 +89,14 @@ def unlock_zvault() -> tuple[dict, Fernet]:
             with open(VAULT_FILE, "rb") as v:
                 token = v.read()
                 data = json.loads(fernet.decrypt(token).decode())
+            logging.info(f"{caller} → Success:unlocked")
             return data, fernet
+            logging.info()
         except:
             attempt += 1
+            logging.info(f"{caller} → Failed:unlock attempt {attempt}")
             print("Wrong password. Try again")
+    logging.info(f"{caller} → max attempts reached")
     print("Wrong password. Exiting.")
     exit()
 
