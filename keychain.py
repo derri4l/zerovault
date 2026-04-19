@@ -64,15 +64,24 @@ def load_saltkey() -> bytes:
 
 
 # unlock_zvault derives the key from master password to decrypt the vault
-def unlock_zvault(password: str) -> tuple[dict, Fernet]:
+def unlock_zvault() -> tuple[dict, Fernet]:
+    attempt = 0
     salt = load_saltkey()
-    secret_key = saltkey(password, salt)
-    fernet = Fernet(secret_key)
 
-    with open(VAULT_FILE, "rb") as v:
-        token = v.read()
-        data = json.loads(fernet.decrypt(token).decode())
-    return data, fernet
+    while attempt < 2:
+        password = getpass.getpass("Enter your master password: ")
+        secret_key = saltkey(password, salt)
+        fernet = Fernet(secret_key)
+        try:
+            with open(VAULT_FILE, "rb") as v:
+                token = v.read()
+                data = json.loads(fernet.decrypt(token).decode())
+            return data, fernet
+        except:
+            attempt += 1
+            print("Wrong password. Try again")
+    print("Wrong password. Exiting.")
+    exit()
 
 
 # save_zvault saves any modified changes and encrypts the vault
@@ -85,8 +94,7 @@ def save_zvault(data: dict, fernet: Fernet):
 
 # zvault_add adds secrets to the vault by passing a label for it
 def zvault_add(label: str):
-    password = getpass.getpass("Enter your Master password: ")
-    data, fernet = unlock_zvault(password)
+    data, fernet = unlock_zvault()
 
     if label in data:
         print("This label already exists")
@@ -106,8 +114,7 @@ def zvault_add(label: str):
 
 # zvault_get prints 'label: secret' for a specific entry
 def zvault_get(label: str):
-    password = getpass.getpass("Enter your Master password: ")
-    data, _ = unlock_zvault(password)
+    data, _ = unlock_zvault()
     if label not in data:
         print(f"No entry for '{label}'.")
         return
@@ -117,11 +124,10 @@ def zvault_get(label: str):
 
 # zvault_list lists only the labels for all entries
 def zvault_list():
-    password = getpass.getpass("Enter your Master password: ")
-    data, _ = unlock_zvault(password)
+    data, _ = unlock_zvault()
 
     if not data:
         print("Vault is empty.")
         return
     for key in data:
-        print(f"• {key}")
+        print(f"→ {key}")
