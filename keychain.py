@@ -13,13 +13,14 @@ from cryptography.fernet import Fernet
 # logging
 def zlogger():
     logging.basicConfig(
-        filename=".zvault.log", level=logging.INFO, format="%(asctime)s - %(message)s"
+        filename=LOG_FILE, level=logging.INFO, format="%(asctime)s - %(message)s"
     )
 
 
 # file paths
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
+LOG_FILE = ".zvault.log"
 
 
 # saltkey hashes our master password
@@ -53,17 +54,20 @@ def zsetup_vault():
             print("Master password has been set successfully. Creating Vault...")
             break
 
-    # write to salt.bin
+    # create salt.bin
     salt = os.urandom(16)
     with open(SALT_FILE, "wb") as g:
         g.write(salt)
+    os.chmod(SALT_FILE, 0o600)
 
     secret_key = saltkey(password, salt)
     fernet = Fernet(secret_key)
     token = fernet.encrypt(json.dumps({}).encode())
 
+    # create vault.json
     with open(VAULT_FILE, "wb") as f:
         f.write(token)
+    os.chmod(VAULT_FILE, 0o600)
     print("Vault created.")
 
 
@@ -72,11 +76,14 @@ def load_saltkey() -> bytes:
         return ls.read()
 
 
-# unlock_zvault derives the key from master password to decrypt the vault
+# setup logging for unlock_zvault
 zlogger()
 caller = inspect.stack()[0][3]
+if os.path.exists(LOG_FILE):
+    os.chmod(LOG_FILE, 0o600)
 
 
+# unlock_zvault derives the key from master password to decrypt the vault
 def unlock_zvault() -> tuple[dict, Fernet]:
     attempt = 0
     salt = load_saltkey()

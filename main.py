@@ -1,3 +1,4 @@
+#!/bin/bash
 # main.py
 import argparse
 
