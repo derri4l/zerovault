@@ -143,7 +143,7 @@ def zvault_get(label: str):
         print(f"No entry for '{label}'.")
         return
 
-    print(f" {label} →  {data[label]}")
+    print(f" {label} :  {data[label]}")
 
 
 # zvault_list lists only the labels for all entries
@@ -154,4 +154,4 @@ def zvault_list():
         print("Vault is empty.")
         return
     for key in data:
-        print(f"→ {key}")
+        print(f"• {key}")
