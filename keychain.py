@@ -17,7 +17,7 @@ def zlogger():
     )
 
 
-# file paths
+# files
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
 LOG_FILE = ".zvault.log"
@@ -54,23 +54,25 @@ def zsetup_vault():
             print("Master password has been set successfully. Creating Vault...")
             break
 
-    # create salt.bin
+    # write generated salt into salt.bin
     salt = os.urandom(16)
     with open(SALT_FILE, "wb") as g:
         g.write(salt)
     os.chmod(SALT_FILE, 0o600)
 
+    # use Fernet to encrypt the vault
     secret_key = saltkey(password, salt)
     fernet = Fernet(secret_key)
     token = fernet.encrypt(json.dumps({}).encode())
 
-    # create vault.json
+    # encrpyt the vault with Fernet token
     with open(VAULT_FILE, "wb") as f:
         f.write(token)
-    os.chmod(VAULT_FILE, 0o600)
+    os.chmod(VAULT_FILE, 0o600)  # file permissions
     print("Vault created.")
 
 
+# Reads the stored salt from salt.bin and returns it as raw bytes.
 def load_saltkey() -> bytes:
     with open(SALT_FILE, "rb") as ls:
         return ls.read()
@@ -78,7 +80,9 @@ def load_saltkey() -> bytes:
 
 # setup logging for unlock_zvault
 zlogger()
-caller = inspect.stack()[0][3]
+caller = inspect.stack()[0][
+    3
+]  # inspect module that called unlock_vault and logging info
 if os.path.exists(LOG_FILE):
     os.chmod(LOG_FILE, 0o600)
 
