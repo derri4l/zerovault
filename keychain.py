@@ -162,7 +162,7 @@ def zvault_del(label: str):
         print(f"{label} does not exist")
         return
 
-    print(f"Are you sure you want to delete{label}")
+    print(f"Are you sure you want to delete {label}")
     confirm = confirm_choice()
     if confirm == "n":
         print("Aborted")
@@ -170,6 +170,7 @@ def zvault_del(label: str):
     else:
         del entry[label]
 
+    logging.info(f"{caller} → {label} was deleted")
     save_zvault(entry, fernet)
     print(f"'{label}' has been deleted.")
 
@@ -192,4 +193,4 @@ def zvault_list():
         print("Vault is empty.")
         return
     for key in entry:
-        print(f"• {key}")
+        print(f"- {key}")
