@@ -2,7 +2,7 @@
 # main.py
 import argparse
 
-from keychain import zsetup_vault, zvault_add, zvault_get, zvault_list
+from keychain import zsetup_vault, zvault_add, zvault_del, zvault_get, zvault_list
 
 
 def main():
@@ -13,6 +13,9 @@ def main():
 
     p_add = sub.add_parser("add")
     p_add.add_argument("name")
+
+    p_del = sub.add_parser("del")
+    p_del.add_argument("name")
 
     p_get = sub.add_parser("get")
     p_get.add_argument("name")
@@ -28,6 +31,8 @@ def main():
         zvault_get(args.name)
     elif args.command == "list":
         zvault_list()
+    elif args.command == "del":
+        zvault_del(args.name)
     else:
         parser.print_help()
 

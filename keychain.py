@@ -72,6 +72,19 @@ def zsetup_vault():
     print("Vault created.")
 
 
+# confirmation model
+def confirm_choice(max_attempts=3):
+    attempt = 0
+    while attempt < max_attempts:
+        choice = input("[y]Yes or [n]No: ").strip().lower()
+        if choice in ("y", "n"):
+            return choice
+        attempt += 1
+        print("Invalid choice, please select [y]Yes or [no]")
+    print("Too many invalid choices. Exiting")
+    exit()
+
+
 # Reads the stored salt from salt.bin and returns it as raw bytes.
 def load_saltkey() -> bytes:
     with open(SALT_FILE, "rb") as ls:
@@ -94,15 +107,16 @@ def unlock_zvault() -> tuple[dict, Fernet]:
 
     while attempt < 2:
         password = getpass.getpass("Enter your master password: ")
+
         secret_key = saltkey(password, salt)
         fernet = Fernet(secret_key)
         try:
             with open(VAULT_FILE, "rb") as v:
                 token = v.read()
-                data = json.loads(fernet.decrypt(token).decode())
+                entry = json.loads(fernet.decrypt(token).decode())
             logging.info(f"{caller} → Success:unlocked")
-            return data, fernet
-            logging.info()
+            return entry, fernet
+
         except:
             attempt += 1
             logging.info(f"{caller} → Failed:unlock attempt {attempt}")
@@ -113,8 +127,8 @@ def unlock_zvault() -> tuple[dict, Fernet]:
 
 
 # save_zvault saves any modified changes and encrypts the vault
-def save_zvault(data: dict, fernet: Fernet):
-    token = fernet.encrypt(json.dumps(data).encode())
+def save_zvault(entry: dict, fernet: Fernet):
+    token = fernet.encrypt(json.dumps(entry).encode())
 
     with open(VAULT_FILE, "wb") as sv:
         sv.write(token)
@@ -122,40 +136,60 @@ def save_zvault(data: dict, fernet: Fernet):
 
 # zvault_add adds secrets to the vault by passing a label for it
 def zvault_add(label: str):
-    data, fernet = unlock_zvault()
+    entry, fernet = unlock_zvault()
 
-    if label in data:
+    if label in entry:
         print("This label already exists")
         overwrite = input("Overwrite? (y/n): ")
         if overwrite == "n":
             exit()
         else:
             secret = getpass.getpass(f"Enter secret for '{label}': ")
-            data[label] = secret
+            entry[label] = secret
     else:
         secret = getpass.getpass(f"Enter secret for '{label}': ")
-        data[label] = secret
+        entry[label] = secret
 
-    save_zvault(data, fernet)
+    save_zvault(entry, fernet)
     print(f"'{label}' added.")
+
+
+# zvault_del
+def zvault_del(label: str):
+    entry, fernet = unlock_zvault()
+
+    if label not in entry:
+        print(f"{label} does not exist")
+        return
+
+    print(f"Are you sure you want to delete{label}")
+    confirm = confirm_choice()
+    if confirm == "n":
+        print("Aborted")
+
+    else:
+        del entry[label]
+
+    save_zvault(entry, fernet)
+    print(f"'{label}' has been deleted.")
 
 
 # zvault_get prints 'label: secret' for a specific entry
 def zvault_get(label: str):
-    data, _ = unlock_zvault()
-    if label not in data:
+    entry, _ = unlock_zvault()
+    if label not in entry:
         print(f"No entry for '{label}'.")
         return
 
-    print(f" {label} :  {data[label]}")
+    print(f" {label} :  {entry[label]}")
 
 
 # zvault_list lists only the labels for all entries
 def zvault_list():
-    data, _ = unlock_zvault()
+    entry, _ = unlock_zvault()
 
-    if not data:
+    if not entry:
         print("Vault is empty.")
         return
-    for key in data:
+    for key in entry:
         print(f"• {key}")
