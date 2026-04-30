@@ -60,15 +60,15 @@ def zsetup_vault():
         g.write(salt)
     os.chmod(SALT_FILE, 0o600)
 
-    # use Fernet to encrypt the vault
+    # encrpyt the vault with Fernet token
     secret_key = saltkey(password, salt)
     fernet = Fernet(secret_key)
     token = fernet.encrypt(json.dumps({}).encode())
 
-    # encrpyt the vault with Fernet token
+
     with open(VAULT_FILE, "wb") as f:
         f.write(token)
-    os.chmod(VAULT_FILE, 0o600)  # file permissions
+    os.chmod(VAULT_FILE, 0o600)  # set file permissions
     print("Vault created.")
 
 
