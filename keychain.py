@@ -7,7 +7,7 @@ import logging
 import os
 
 from argon2.low_level import Type, hash_secret_raw
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 
 # logging
@@ -117,7 +117,7 @@ def unlock_zvault() -> tuple[dict, Fernet]:
             logging.info(f"{caller} → Success:unlocked")
             return entry, fernet
 
-        except:
+        except InvalidToken:
             attempt += 1
             logging.info(f"{caller} → Failed:unlock attempt {attempt}")
             print("Wrong password. Try again")
@@ -166,6 +166,7 @@ def zvault_del(label: str):
     confirm = confirm_choice()
     if confirm == "n":
         print("Aborted")
+        return
 
     else:
         del entry[label]
