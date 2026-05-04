@@ -6,6 +6,7 @@ import json
 import logging
 import os
 
+import pyperclip
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -106,6 +107,7 @@ def unlock_zvault() -> tuple[dict, Fernet, bytes]:
             entry = json.loads(fernet.decrypt(token).decode())
             logging.info(f"{caller} → Success:unlocked")
             return entry, fernet, salt
+            # exit after 3 invalid attempts
         except InvalidToken:
             attempt += 1
             logging.info(f"{caller} → Failed:unlock attempt {attempt}")
@@ -147,7 +149,7 @@ def zvault_del(label: str):
     entry, fernet, salt = unlock_zvault()
 
     if label not in entry:
-        print(f"{label} does not exist")
+        print(f"'{label}' does not exist")
         return
 
     print(f"Are you sure you want to delete {label}")
@@ -171,7 +173,9 @@ def zvault_get(label: str):
         print(f"No entry for '{label}'.")
         return
 
-    print(f" {label} :  {entry[label]}")
+        # copy the secret to clipboard instead
+    pyperclip.copy(entry[label])
+    print(f"'{label}' has been copied to the clipboard!")
 
 
 # zvault_list lists only the labels for all entries
@@ -182,4 +186,4 @@ def zvault_list():
         print("Vault is empty.")
         return
     for key in entry:
-        print(f"- {key}")
+        print(f"- '{key}'")

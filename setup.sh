@@ -10,7 +10,7 @@ fi
 
 #create the enviroment and install dependencies
 python3 -m venv .zvault
-.zvault/bin/pip install cryptography argon2-cffi
+.zvault/bin/pip install cryptography argon2-cffi pyperclip
 
 clear
 
