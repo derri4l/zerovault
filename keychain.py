@@ -17,10 +17,15 @@ def zlogger():
     )
 
 
-# files
+# variables
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
 LOG_FILE = ".zvault.log"
+TIME_COST = 2
+MEMORY_COST = 65536
+PARALLELISM = 2
+HASH_LEN = 32
+TYPE = Type.ID
 
 
 # saltkey hashes our master password
@@ -28,11 +33,11 @@ def saltkey(password: str, salt: bytes) -> bytes:
     raw = hash_secret_raw(
         secret=password.encode(),
         salt=salt,
-        time_cost=2,
-        memory_cost=65536,
-        parallelism=1,
-        hash_len=32,
-        type=Type.ID,  # Argon2id
+        time_cost=TIME_COST,
+        memory_cost=MEMORY_COST,
+        parallelism=PARALLELISM,
+        hash_len=HASH_LEN,
+        type=TYPE,
     )
     return base64.urlsafe_b64encode(raw)
 
@@ -54,21 +59,14 @@ def zsetup_vault():
             print("Master password has been set successfully. Creating Vault...")
             break
 
-    # write generated salt into salt.bin
+    # generate salt.bin and write it into the vault
     salt = os.urandom(16)
-    with open(SALT_FILE, "wb") as g:
-        g.write(salt)
-    os.chmod(SALT_FILE, 0o600)
-
-    # encrpyt the vault with Fernet token
     secret_key = saltkey(password, salt)
     fernet = Fernet(secret_key)
     token = fernet.encrypt(json.dumps({}).encode())
-
-
     with open(VAULT_FILE, "wb") as f:
-        f.write(token)
-    os.chmod(VAULT_FILE, 0o600)  # set file permissions
+        f.write(salt + token)
+    os.chmod(VAULT_FILE, 0o600)
     print("Vault created.")
 
 
@@ -85,12 +83,6 @@ def confirm_choice(max_attempts=3):
     exit()
 
 
-# Reads the stored salt from salt.bin and returns it as raw bytes.
-def load_saltkey() -> bytes:
-    with open(SALT_FILE, "rb") as ls:
-        return ls.read()
-
-
 # setup logging for unlock_zvault
 zlogger()
 caller = inspect.stack()[0][
@@ -101,22 +93,19 @@ if os.path.exists(LOG_FILE):
 
 
 # unlock_zvault derives the key from master password to decrypt the vault
-def unlock_zvault() -> tuple[dict, Fernet]:
+def unlock_zvault() -> tuple[dict, Fernet, bytes]:
     attempt = 0
-    salt = load_saltkey()
-
     while attempt < 2:
         password = getpass.getpass("Enter your master password: ")
-
+        with open(VAULT_FILE, "rb") as v:
+            data = v.read()
+        salt, token = data[:16], data[16:]
         secret_key = saltkey(password, salt)
         fernet = Fernet(secret_key)
         try:
-            with open(VAULT_FILE, "rb") as v:
-                token = v.read()
-                entry = json.loads(fernet.decrypt(token).decode())
+            entry = json.loads(fernet.decrypt(token).decode())
             logging.info(f"{caller} → Success:unlocked")
-            return entry, fernet
-
+            return entry, fernet, salt
         except InvalidToken:
             attempt += 1
             logging.info(f"{caller} → Failed:unlock attempt {attempt}")
@@ -127,16 +116,15 @@ def unlock_zvault() -> tuple[dict, Fernet]:
 
 
 # save_zvault saves any modified changes and encrypts the vault
-def save_zvault(entry: dict, fernet: Fernet):
+def save_zvault(entry: dict, fernet: Fernet, salt: bytes):
     token = fernet.encrypt(json.dumps(entry).encode())
-
     with open(VAULT_FILE, "wb") as sv:
-        sv.write(token)
+        sv.write(salt + token)
 
 
 # zvault_add adds secrets to the vault by passing a label for it
 def zvault_add(label: str):
-    entry, fernet = unlock_zvault()
+    entry, fernet, salt = unlock_zvault()
 
     if label in entry:
         print("This label already exists")
@@ -150,13 +138,13 @@ def zvault_add(label: str):
         secret = getpass.getpass(f"Enter secret for '{label}': ")
         entry[label] = secret
 
-    save_zvault(entry, fernet)
+    save_zvault(entry, fernet, salt)
     print(f"'{label}' added.")
 
 
 # zvault_del
 def zvault_del(label: str):
-    entry, fernet = unlock_zvault()
+    entry, fernet, salt = unlock_zvault()
 
     if label not in entry:
         print(f"{label} does not exist")
@@ -172,13 +160,13 @@ def zvault_del(label: str):
         del entry[label]
 
     logging.info(f"{caller} → {label} was deleted")
-    save_zvault(entry, fernet)
+    save_zvault(entry, fernet, salt)
     print(f"'{label}' has been deleted.")
 
 
 # zvault_get prints 'label: secret' for a specific entry
 def zvault_get(label: str):
-    entry, _ = unlock_zvault()
+    entry, _, _ = unlock_zvault()
     if label not in entry:
         print(f"No entry for '{label}'.")
         return
@@ -188,7 +176,7 @@ def zvault_get(label: str):
 
 # zvault_list lists only the labels for all entries
 def zvault_list():
-    entry, _ = unlock_zvault()
+    entry, _, _ = unlock_zvault()
 
     if not entry:
         print("Vault is empty.")
