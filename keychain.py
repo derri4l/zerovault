@@ -15,8 +15,8 @@ from cryptography.fernet import Fernet, InvalidToken
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
 LOG_FILE = ".zvault.log"
-TIME_COST = 2
-MEMORY_COST = 65536
+TIME_COST = 4
+MEMORY_COST = 262144
 PARALLELISM = 2
 HASH_LEN = 32
 TYPE = Type.ID
@@ -62,7 +62,7 @@ def zsetup_vault():
         print("Vault already exists. Delete vault.json to reset.")
         return
 
-        # prompt for master password
+    # prompt for first setup master password
     attempt = 0
     while attempt < 3:
         password = getpass.getpass("First time? Enter your master password: ")
@@ -124,7 +124,6 @@ def unlock_zvault() -> tuple[dict, Fernet, bytes]:
             attempt += 1
 
             print("Wrong password. Try again")
-
     print("Wrong password. Exiting.")
     exit()
 
@@ -141,10 +140,11 @@ def zvault_add(label: str):
     entry, fernet, salt = unlock_zvault()
     # check if entry already exists
     if label in entry:
-        print("This label already exists")
-        overwrite = input("Overwrite? (y/n): ")
-        if overwrite == "n":
-            exit()
+        print("This label already exists, Overwrite?")
+        choice = confirm_choice()
+        if choice == "n":
+            print("Aborted")
+            return
         else:
             secret = getpass.getpass(f"Enter secret for '{label}': ")
             entry[label] = secret
@@ -197,4 +197,4 @@ def zvault_list():
         print("Vault is empty.")
         return
     for key in entry:
-        print(f"- '{key}'")
+        print(f"- {key}")
