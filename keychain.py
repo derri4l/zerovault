@@ -11,7 +11,7 @@ import pyperclip
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.fernet import Fernet, InvalidToken
 
-# variables
+# variables/parameters
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
 LOG_FILE = ".zvault.log"
@@ -22,7 +22,7 @@ HASH_LEN = 32
 TYPE = Type.ID
 
 
-# saltkey hashes our master password
+
 def saltkey(password: str, salt: bytes) -> bytes:
     raw = hash_secret_raw(
         secret=password.encode(),
@@ -56,10 +56,10 @@ def master_strength(masterp: str) -> bool:
     return True
 
 
-# first time vault setup
-def zsetup_vault():
+# zvault_init initializes the vault for the first time
+def zvault_init():
     if os.path.exists(VAULT_FILE):
-        print("Vault already exists. Delete vault.json to reset.")
+        print("Vault already exists. Delete vault.json to reset the vault.")
         return
 
     # prompt for first setup master password
@@ -122,20 +122,19 @@ def unlock_zvault() -> tuple[dict, Fernet, bytes]:
             # exit after 3 invalid attempts
         except InvalidToken:
             attempt += 1
-
             print("Wrong password. Try again")
     print("Wrong password. Exiting.")
     exit()
 
 
-# save_zvault saves any modified changes and encrypts the vault
+# save_zvault saves any modified changes and re-encrypts the vault
 def save_zvault(entry: dict, fernet: Fernet, salt: bytes):
     token = fernet.encrypt(json.dumps(entry).encode())
     with open(VAULT_FILE, "wb") as sv:
         sv.write(salt + token)
 
 
-# zvault_add adds secrets to the vault by passing a label for it
+# zvault_add adds secrets to the vault by passing a label for it. eg. 'zvault add github'
 def zvault_add(label: str):
     entry, fernet, salt = unlock_zvault()
     # check if entry already exists
@@ -146,6 +145,7 @@ def zvault_add(label: str):
             print("Aborted")
             return
         else:
+            # secret would be the actual password you for the label passed
             secret = getpass.getpass(f"Enter secret for '{label}': ")
             entry[label] = secret
     else:
@@ -156,45 +156,45 @@ def zvault_add(label: str):
     print(f"'{label}' added.")
 
 
-# zvault_del
+# zvault_del deletes the entire entry by also passing the label for it. eg. 'zvault del github'
 def zvault_del(label: str):
     entry, fernet, salt = unlock_zvault()
-
+# check if the label exists
     if label not in entry:
         print(f"'{label}' does not exist")
         return
-
+# confirm user wants to delete the entry
     print(f"Are you sure you want to delete {label}")
     confirm = confirm_choice()
     if confirm == "n":
         print("Aborted")
         return
-
     else:
         del entry[label]
-
+        
     save_zvault(entry, fernet, salt)
     print(f"'{label}' has been deleted.")
 
 
-# zvault_get prints 'label: secret' for a specific entry
+# zvault_get copies the password/secret directly into your clipboard. eg. 'zvault get github'
 def zvault_get(label: str):
     entry, _, _ = unlock_zvault()
     if label not in entry:
         print(f"No entry for '{label}'.")
         return
-
+        
         # copy the secret to clipboard instead
     pyperclip.copy(entry[label])
     print(f"'{label}' has been copied to the clipboard!")
 
 
-# zvault_list lists only the labels for all entries
+# zvault_list lists the available labels in the vault. eg. 'zvault list'
 def zvault_list():
     entry, _, _ = unlock_zvault()
 
     if not entry:
         print("Vault is empty.")
         return
+        
     for key in entry:
         print(f"- {key}")
