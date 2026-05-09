@@ -1,9 +1,6 @@
-import argparse
 import base64
 import getpass
-import inspect
 import json
-import logging
 import os
 import string
 
@@ -11,7 +8,6 @@ import pyperclip
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.fernet import Fernet, InvalidToken
 
-# variables/parameters
 SALT_FILE = "salt.bin"
 VAULT_FILE = "vault.json"
 LOG_FILE = ".zvault.log"
@@ -20,7 +16,6 @@ MEMORY_COST = 262144
 PARALLELISM = 2
 HASH_LEN = 32
 TYPE = Type.ID
-
 
 
 def saltkey(password: str, salt: bytes) -> bytes:
@@ -159,11 +154,11 @@ def zvault_add(label: str):
 # zvault_del deletes the entire entry by also passing the label for it. eg. 'zvault del github'
 def zvault_del(label: str):
     entry, fernet, salt = unlock_zvault()
-# check if the label exists
+    # check if the label exists
     if label not in entry:
         print(f"'{label}' does not exist")
         return
-# confirm user wants to delete the entry
+    # confirm user wants to delete the entry
     print(f"Are you sure you want to delete {label}")
     confirm = confirm_choice()
     if confirm == "n":
@@ -171,7 +166,7 @@ def zvault_del(label: str):
         return
     else:
         del entry[label]
-        
+
     save_zvault(entry, fernet, salt)
     print(f"'{label}' has been deleted.")
 
@@ -182,7 +177,7 @@ def zvault_get(label: str):
     if label not in entry:
         print(f"No entry for '{label}'.")
         return
-        
+
         # copy the secret to clipboard instead
     pyperclip.copy(entry[label])
     print(f"'{label}' has been copied to the clipboard!")
@@ -195,6 +190,6 @@ def zvault_list():
     if not entry:
         print("Vault is empty.")
         return
-        
+
     for key in entry:
         print(f"- {key}")
