@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "init":
-        zsetup_vault()
+        zvault_init()
     elif args.command == "add":
         zvault_add(args.name)
     elif args.command == "get":
