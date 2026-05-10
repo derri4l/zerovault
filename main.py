@@ -2,7 +2,7 @@
 # main.py
 import argparse
 
-from keychain import zsetup_vault, zvault_add, zvault_del, zvault_get, zvault_list
+from keychain import zvault_init, zvault_add, zvault_del, zvault_get, zvault_list
 
 
 def main():
